@@ -1,76 +1,98 @@
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, post, put, delete};
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use reqwest;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use dotenv::dotenv;
-use std::env;
-use supabase::SupabaseClient;  // Assuming you're using Supabase client or an HTTP client to interact with Supabase API
-use uuid::Uuid;
 
 #[derive(Serialize, Deserialize)]
-struct Post {
-    id: String,
-    user_id: String,
-    title: String,
-    content: String,
-    likes: i32,
-    shared: bool,
+pub struct AuthData {
+    pub email: String,
+    pub password: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct User {
-    email: String,
-    password: String,
+pub struct Post {
+    pub id: String,
+    pub title: String,
+    pub content: String,
+    pub likes: i32,
 }
 
-#[derive(Clone)]
-struct AppState {
-    supabase: Arc<SupabaseClient>,  // You need to integrate Supabase for DB interaction
+// Signup handler
+async fn signup(data: web::Json<AuthData>) -> impl Responder {
+    let url = "https://YOUR_PROJECT_ID.supabase.co/auth/v1/signup"; // Replace with actual Supabase URL
+    let client = reqwest::Client::new();
+    
+    // Request to create a user
+    let res = client
+        .post(url)
+        .header("apikey", "YOUR_SUPABASE_API_KEY") // Replace with your actual API key
+        .header("Authorization", format!("Bearer {}", "YOUR_SUPABASE_API_KEY"))
+        .json(&*data) // Use json() instead of body() for direct serialization
+        .send()
+        .await;
+
+    match res {
+        Ok(response) => {
+            if response.status().is_success() {
+                HttpResponse::Ok().body("User signed up successfully")
+            } else {
+                HttpResponse::BadRequest().body("Failed to sign up user")
+            }
+        },
+        Err(_) => HttpResponse::InternalServerError().body("Error during signup"),
+    }
 }
 
-#[post("/sign_up")]
-async fn sign_up(data: web::Data<AppState>, user: web::Json<User>) -> impl Responder {
-    // Simulating user signup - You should interact with Supabase to create the user
-    let new_user = data.supabase.create_user(user.into_inner()).await;
-    HttpResponse::Created().json(new_user)
-}
+// Like post handler
+async fn like_post(web::Path(id): web::Path<String>) -> impl Responder {
+    let url = format!("https://YOUR_PROJECT_ID.supabase.co/rest/v1/posts?id=eq.{}", id); // Replace with actual Supabase URL
+    let client = reqwest::Client::new();
+    
+    // Request to fetch post by ID
+    let res = client
+        .get(&url)
+        .header("apikey", "YOUR_SUPABASE_API_KEY") // Replace with your actual API key
+        .header("Authorization", format!("Bearer {}", "YOUR_SUPABASE_API_KEY"))
+        .send()
+        .await;
 
-#[post("/posts")]
-async fn create_post(data: web::Data<AppState>, post: web::Json<Post>) -> impl Responder {
-    // Create a post in the Supabase database
-    let new_post = data.supabase.create_post(post.into_inner()).await;
-    HttpResponse::Created().json(new_post)
-}
+    match res {
+        Ok(response) => {
+            if let Ok(mut posts) = response.json::<Vec<Post>>().await {
+                if let Some(mut post) = posts.pop() {
+                    post.likes += 1;
+                    
+                    // Update the post with a new like count
+                    let update_res = client
+                        .put(&url)
+                        .header("apikey", "YOUR_SUPABASE_API_KEY") // Replace with your actual API key
+                        .header("Authorization", format!("Bearer {}", "YOUR_SUPABASE_API_KEY"))
+                        .header("Content-Type", "application/json")
+                        .json(&post) // Serialize the post into JSON
+                        .send()
+                        .await;
 
-#[put("/posts/{id}/like")]
-async fn like_post(data: web::Data<AppState>, post_id: web::Path<String>) -> impl Responder {
-    // Simulate liking the post, interact with Supabase to update
-    let updated_post = data.supabase.like_post(&post_id).await;
-    HttpResponse::Ok().json(updated_post)
-}
-
-#[delete("/posts/{id}")]
-async fn delete_post(data: web::Data<AppState>, post_id: web::Path<String>) -> impl Responder {
-    // Delete post using Supabase API
-    let result = data.supabase.delete_post(&post_id).await;
-    HttpResponse::Ok().json(result)
+                    if let Ok(_) = update_res {
+                        return HttpResponse::Ok().body("Post liked");
+                    } else {
+                        return HttpResponse::InternalServerError().body("Error updating post");
+                    }
+                } else {
+                    return HttpResponse::NotFound().body("Post not found");
+                }
+            } else {
+                return HttpResponse::InternalServerError().body("Failed to fetch post");
+            }
+        },
+        Err(_) => HttpResponse::InternalServerError().body("Error during like request"),
+    }
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();  // Load environment variables
-
-    let supabase_url = env::var("SUPABASE_URL").expect("SUPABASE_URL not set");
-    let supabase_key = env::var("SUPABASE_KEY").expect("SUPABASE_KEY not set");
-
-    let supabase_client = Arc::new(SupabaseClient::new(&supabase_url, &supabase_key));
-
-    HttpServer::new(move || {
+    HttpServer::new(|| {
         App::new()
-            .app_data(web::Data::new(AppState { supabase: supabase_client.clone() }))
-            .service(sign_up)
-            .service(create_post)
-            .service(like_post)
-            .service(delete_post)
+            .route("/signup", web::post().to(signup))
+            .route("/like/{id}", web::post().to(like_post))
     })
     .bind("127.0.0.1:8080")?
     .run()
