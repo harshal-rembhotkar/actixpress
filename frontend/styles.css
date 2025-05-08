@@ -1,0 +1,25 @@
+body {
+  font-family: sans-serif;
+  padding: 2em;
+  max-width: 700px;
+  margin: auto;
+  background: #f8f8f8;
+}
+form {
+  margin-bottom: 2em;
+}
+input, textarea {
+  display: block;
+  width: 100%;
+  margin: 0.5em 0;
+  padding: 0.5em;
+}
+button {
+  padding: 0.5em 1em;
+}
+.post {
+  background: white;
+  padding: 1em;
+  margin-bottom: 1em;
+  border-radius: 5px;
+}

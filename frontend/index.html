@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ActixPress - Blog</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>ActixPress</h1>
+
+    <div>
+        <a href="signup.html">Sign Up</a> | 
+        <a href="login.html">Login</a>
+    </div>
+
+    <form id="post-form">
+        <input type="text" id="title" placeholder="Post Title" required />
+        <textarea id="content" placeholder="Write your blog post..." required></textarea>
+        <input type="text" id="author" placeholder="Author" required />
+        <button type="submit">Publish</button>
+    </form>
+
+    <h2>All Posts</h2>
+    <div id="posts-container"></div>
+
+    <script src="main.js"></script>
+</body>
+</html>
