@@ -1,0 +1,14 @@
+[package]
+name = "actixpress"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+actix-web = "4.0"
+actix-rt = "2.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+supabase = "0.1"  # Rust client for Supabase (you may need to use a different HTTP client if the official Rust SDK isn't available)
+dotenv = "0.15"
+uuid = { version = "1.0", features = ["v4"] }
