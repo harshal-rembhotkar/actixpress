@@ -18,14 +18,14 @@ pub struct Post {
 
 // Signup handler
 async fn signup(data: web::Json<AuthData>) -> impl Responder {
-    let url = "https://YOUR_PROJECT_ID.supabase.co/auth/v1/signup"; // Replace with actual Supabase URL
+    let url = "https://frkqxwqaveertytosczc.supabase.co/auth/v1/signup"; // Replace with actual Supabase URL
     let client = reqwest::Client::new();
     
     // Request to create a user
     let res = client
         .post(url)
-        .header("apikey", "YOUR_SUPABASE_API_KEY") // Replace with your actual API key
-        .header("Authorization", format!("Bearer {}", "YOUR_SUPABASE_API_KEY"))
+        .header("apikey", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZya3F4d3FhdmVlcnR5dG9zY3pjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjY4MDk1NCwiZXhwIjoyMDYyMjU2OTU0fQ.HQuN3QAcuydlTJjTY6wUE-ud8M_YWillmvRUz_uSBd0") // Replace with your actual API key
+        .header("Authorization", format!("Bearer {}", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZya3F4d3FhdmVlcnR5dG9zY3pjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjY4MDk1NCwiZXhwIjoyMDYyMjU2OTU0fQ.HQuN3QAcuydlTJjTY6wUE-ud8M_YWillmvRUz_uSBd0"))
         .json(&*data) // Use json() instead of body() for direct serialization
         .send()
         .await;
@@ -43,49 +43,53 @@ async fn signup(data: web::Json<AuthData>) -> impl Responder {
 }
 
 // Like post handler
-async fn like_post(web::Path(id): web::Path<String>) -> impl Responder {
-    let url = format!("https://YOUR_PROJECT_ID.supabase.co/rest/v1/posts?id=eq.{}", id); // Replace with actual Supabase URL
+async fn like_post(path: web::Path<String>) -> impl Responder {
+    let id = path.into_inner();
+    let url = format!("https://frkqxwqaveertytosczc.supabase.co/rest/v1/posts?id=eq.{}", id);
+    let api_key = "YOUR_SUPABASE_API_KEY";
+    let bearer_token = format!("Bearer {}", api_key);
+
     let client = reqwest::Client::new();
-    
-    // Request to fetch post by ID
+
+    // Fetch the post
     let res = client
         .get(&url)
-        .header("apikey", "YOUR_SUPABASE_API_KEY") // Replace with your actual API key
-        .header("Authorization", format!("Bearer {}", "YOUR_SUPABASE_API_KEY"))
+        .header("apikey", api_key)
+        .header("Authorization", &bearer_token)
         .send()
         .await;
 
     match res {
         Ok(response) => {
-            if let Ok(mut posts) = response.json::<Vec<Post>>().await {
-                if let Some(mut post) = posts.pop() {
-                    post.likes += 1;
-                    
-                    // Update the post with a new like count
-                    let update_res = client
-                        .put(&url)
-                        .header("apikey", "YOUR_SUPABASE_API_KEY") // Replace with your actual API key
-                        .header("Authorization", format!("Bearer {}", "YOUR_SUPABASE_API_KEY"))
-                        .header("Content-Type", "application/json")
-                        .json(&post) // Serialize the post into JSON
-                        .send()
-                        .await;
+            match response.json::<Vec<Post>>().await {
+                Ok(mut posts) => {
+                    if let Some(mut post) = posts.pop() {
+                        post.likes += 1;
 
-                    if let Ok(_) = update_res {
-                        return HttpResponse::Ok().body("Post liked");
+                        let update_res = client
+                            .put(&url)
+                            .header("apikey", api_key)
+                            .header("Authorization", &bearer_token)
+                            .header("Content-Type", "application/json")
+                            .json(&post)
+                            .send()
+                            .await;
+
+                        match update_res {
+                            Ok(_) => HttpResponse::Ok().body("Post liked"),
+                            Err(_) => HttpResponse::InternalServerError().body("Error updating post"),
+                        }
                     } else {
-                        return HttpResponse::InternalServerError().body("Error updating post");
+                        HttpResponse::NotFound().body("Post not found")
                     }
-                } else {
-                    return HttpResponse::NotFound().body("Post not found");
                 }
-            } else {
-                return HttpResponse::InternalServerError().body("Failed to fetch post");
+                Err(_) => HttpResponse::InternalServerError().body("Failed to parse post response"),
             }
-        },
-        Err(_) => HttpResponse::InternalServerError().body("Error during like request"),
+        }
+        Err(_) => HttpResponse::InternalServerError().body("Failed to fetch post"),
     }
 }
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
