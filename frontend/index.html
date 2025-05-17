@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ActixPress Blogging App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Welcome to ActixPress</h1>
+    <div id="auth">
+        <h2>Sign Up</h2>
+        <input id="signup-username" type="text" placeholder="Username" />
+        <input id="signup-password" type="password" placeholder="Password" />
+        <button onclick="signUp()">Sign Up</button>
+        
+        <h2>Login</h2>
+        <input id="login-username" type="text" placeholder="Username" />
+        <input id="login-password" type="password" placeholder="Password" />
+        <button onclick="logIn()">Login</button>
+    </div>
+    <div id="post-section" style="display:none;">
+        <h2>Create Post</h2>
+        <input id="post-title" type="text" placeholder="Title" />
+        <textarea id="post-content" placeholder="Content"></textarea>
+        <button onclick="createPost()">Create Post</button>
+
+        <h2>Posts</h2>
+        <div id="posts"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
